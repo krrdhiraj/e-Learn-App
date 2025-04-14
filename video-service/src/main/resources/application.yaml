@@ -1,0 +1,60 @@
+server:
+  port: 9093
+
+spring:
+  servlet:
+    multipart:
+      max-file-size: 500MB
+      max-request-size: 500MB
+  cloud:
+    openfeign:
+      circuitbreaker:
+        enabled: true # enabling circuitbreaker
+  application:
+    name: video-service
+  data:
+    mongodb:
+      host: localhost
+      port: 27017
+      database: videoDb
+
+  config:
+    import: "optional:configserver:http://localhost:9094/"
+
+#service discovery eureka configuration
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka
+
+
+#application monitoring info
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  info:
+    env:
+      enabled: true
+#service details
+info:
+  app:
+    name: "video-service"
+    description: "This is a video service"
+    version: "1.0"
+
+# configuration for circuit breaker
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        sliding-window-size: 10
+        permitted-number-of-calls-in-half-open-state: 2
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 1000
+
+# path to upload video
+video:
+  upload:
+    path: "uploads/videos"

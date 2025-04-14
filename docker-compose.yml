@@ -1,0 +1,338 @@
+# docker compose file to run our microservice container
+# version: '3.8'
+
+# # mysql - phpadmin, postgress - pgadmin, mongodb - mongo-express
+
+services:
+
+# Notification - service
+  notification:
+    image: dhiraj4/notification-service:v2
+    container_name: notification-ms
+    ports:
+      - 9888:9888
+    environment:
+      - SERVER_PORT=9888
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery:8761/eureka
+      - SPRING_CLOUD_STREAM_KAFKA_BINDER_BROKERS=kafka:8085
+    networks:
+      - backend
+    deploy:
+      resources:
+        limits:
+          memory: 900m
+    depends_on:
+      - kafka
+      - discovery
+
+# Order - service
+  order:
+    image: dhiraj4/order-service:v3
+    container_name: order-ms
+    ports:
+      - 9098:9098
+    networks:
+      - backend
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery:8761/eureka
+      - SPRING_CLOUD_STREAM_KAFKA_BINDER_BROKERS=kafka:8085
+    deploy:
+      resources:
+        limits:
+          memory: 900m
+    depends_on:
+      - kafka
+      - discovery
+
+  # category - service
+  category:
+    image: dhiraj4/category-service:v3
+    container_name: category-ms
+    ports:
+      - 9091:9091
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-db:3306/categorydb
+      - SPRING_DATASOURCE_USERNAME=user
+      - SPRING_DATASOURCE_PASSWORD=user123
+      - SPRING_PROFILES_ACTIVE=dev
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery:8761/eureka
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:9094/
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_RABBITMQ_PORT=5672
+      - SPRING_RABBITMQ_USERNAME=guest
+      - SPRING_RABBITMQ_PASSWORD=guest
+    networks:
+      - backend
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+    depends_on:
+      - mysql-db
+      - discovery
+      - config-server
+      - rabbitmq
+  
+  # course -service
+  course:
+    image: dhiraj4/course-service:v3
+    container_name: course-ms
+    ports:
+      - 9092:9092
+    networks:
+      - backend
+    environment:
+      - SERVER_PORT=9092
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-db:5432/coursedb
+      - SPRING_DATASOURCE_USERNAME=user
+      - SPRING_DATASOURCE_PASSWORD=user123
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery:8761/eureka
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:9094/
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_RABBITMQ_PORT=5672
+      - SPRING_RABBITMQ_USERNAME=guest
+      - SPRING_RABBITMQ_PASSWORD=guest
+    deploy:
+      resources:
+        limits:
+          memory: 900m
+    depends_on:
+      - postgres-db
+      - discovery
+      - config-server
+      - rabbitmq
+  
+  # video - service
+  video:
+    image: dhiraj4/video-service:v3
+    container_name: video-ms
+    ports:
+      - 9093:9093
+    networks:
+      - backend
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery:8761/eureka
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:9094
+      - SPRING_DATA_MONGODB_HOST=mongo
+      - SPRING_DATA_MONGODB_PORT=27017
+      - SPRING_DATA_MONGODB_DATABASE=videoDb
+    deploy:
+      resources:
+        limits:
+          memory: 700m
+    depends_on:
+      - discovery
+      - mongo
+      - config-server
+  
+
+# discovery - service
+  discovery:
+    image: dhiraj4/discovery-service:v2
+    container_name: discovery-ms
+    ports:
+      - 8761:8761
+    networks:
+      - backend
+    deploy:
+      resources:
+        limits:
+          memory: 700m
+  
+  # gateway - service
+  gateway:
+    image: dhiraj4/gateway-service:v3
+    container_name: gateway-ms
+    ports:
+      - 9090:9090
+    networks:
+      - backend
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery:8761/eureka
+      - DATA_REDIS_HOST=6379
+      - DATA_REDIS_PORT=6379
+    deploy:
+      resources:
+        limits:
+          memory: 700m
+    depends_on:
+      - discovery
+
+  # Config - service
+  config-server:
+    image: dhiraj4/config-server:v3
+    container_name: config-ms
+    ports:
+      - 9094:9094
+    networks:
+      - backend
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery:8761/eureka
+    deploy:
+      resources:
+        limits:
+          memory: 700m
+    depends_on:
+      - discovery
+
+# redis image
+  redis:
+    image: redis:latest
+    container_name: redis_container
+    ports:
+      - "6379:6379"
+    # restarts: always
+
+# rabbit mq images
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq_container
+    ports:
+      - "5672:5672" # RabbitMQ message broker port
+      - "15672:15672" # RabbitMQ management dashboard port
+    environment:
+      RABBITMQ_DEFAULT_USER: guest # Default username
+      RABBITMQ_DEFAULT_PASS: guest # Default password
+      RABBITMQ_DEFAULT_VHOST: "/" # Default virtual host
+    networks:
+      - backend
+
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq  # Persist RabbitMQ data
+
+# kafka image with zookeeper
+  # zookeeper:
+    # image: confluentinc/cp-zookeeper:latest
+    # container_name: zookeeper
+    # environment:
+    #   ZOOKEEPER_CLIENT_PORT: 2181
+    #   ZOOKEEPER_TICK_TIME: 2000
+    # networks:
+    #   - backend
+
+  # kafka:
+  #   image: confluentinc/cp-kafka:latest
+  #   container_name: kafka-container
+  #   depends_on:
+    #   - zookeeper
+    # ports:
+    #   - "8085:8085"
+    # networks:
+    #   - backend
+    # environment:
+    #   KAFKA_BROKER_ID: 1
+    #   KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+    #   KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:8085
+    #   KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
+    #   KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+# Kafka configuaration to run on different port(8092) from default(9092) with kRaft
+  kafka:
+    image: apache/kafka:4.0.0
+    container_name: kafka-kraft
+    ports:
+      - "8085:8085"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: controller,broker
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:8085,CONTROLLER://0.0.0.0:9096
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:8085
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9096
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+    networks:
+      - backend
+  mysql-db:
+    #name of service
+    image: mysql:8.0
+    container_name: mysql-container
+    environment:
+      MYSQL_ROOT_PASSWORD: admin
+      MYSQL_DATABASE: categorydb
+      MYSQL_USER: user
+      MYSQL_PASSWORD: user123
+    ports:
+      - "3307:3306"
+    volumes:
+      - ./mysql-data:/var/lib/mysql
+    networks:
+      - backend
+
+  # php my admin service: db client
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: phpmyadmin
+    environment:
+      PMA_HOST: mysql-db
+    ports:
+      - "8081:80"
+    depends_on:
+      - mysql-db
+    networks:
+      - backend
+
+  # PostgreSQL Service
+  postgres-db:
+    image: postgres:13
+    container_name: postgres-db
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: user123
+      POSTGRES_DB: coursedb
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./postgres-data:/var/lib/postgresql/data
+    networks:
+      - backend
+
+  # pgAdmin for PostgreSQL
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@gmail.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "8082:80"
+    depends_on:
+      - postgres-db
+    networks:
+      - backend
+
+  # MongoDB Service
+  mongo:
+    image: mongo:latest
+    container_name: mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - ./mongo-data:/data/db
+    networks:
+      - backend
+
+  # Mongo Express for MongoDB
+  mongo-express:
+    image: mongo-express:latest
+    container_name: mongo-express
+    ports:
+      - "8083:8081"
+    environment:
+      ME_CONFIG_MONGODB_SERVER: mongo
+      # MONGO_INITDB_DATABASE: videodb
+    depends_on:
+      - mongo
+    networks:
+      - backend
+
+networks:
+  backend:
+    driver: bridge
+    name: backend
+volumes:
+  mysql-data:
+  postgres-data:
+  mongo-data:
+  rabbitmq_data:

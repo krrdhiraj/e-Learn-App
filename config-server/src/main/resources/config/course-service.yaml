@@ -1,0 +1,48 @@
+
+spring:
+  application:
+    name: course-service
+  datasource:
+    url: jdbc:postgresql://localhost:5432/coursedb
+    username: user
+    password: user123
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+server:
+  port: 9092
+
+#service discovery eureka configuration
+#eureka.instance.prefer-ip-address=true
+eureka:
+  instance:
+    prefer-ip-address: true
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka
+
+#application monitoring info
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  info:
+    env:
+      enabled: true
+#service details
+info:
+  app:
+    name: "course-service"
+    description: "This is a course service"
+    version: "1.0"
+
+
+
+

@@ -1,0 +1,36 @@
+server:
+  port: 9093
+
+spring:
+  application:
+    name: video-service
+  data:
+    mongodb:
+      host: localhost
+      port: 27017
+      database: videoDb
+
+#service discovery eureka configuration
+eureka:
+#  instance:
+#    prefer-ip-address: true
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka
+
+
+#application monitoring info
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  info:
+    env:
+      enabled: true
+#service details
+info:
+  app:
+    name: "video-service"
+    description: "This is a video service"
+    version: "1.0"

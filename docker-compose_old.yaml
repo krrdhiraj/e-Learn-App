@@ -1,0 +1,99 @@
+# mysql - phpadmin, postgress - pgadmin, mongodb - mongo-express
+
+#this is docker file version
+# version: '3.8'
+services:
+  mysql-db:
+    image: mysql:8.0
+    container_name: mysql-container_name
+    environment:
+      MYSQL_ROOT_PASSWORD: admin
+      MYSQL_DATABASE: categorydb
+      MYSQL_USER: user
+      MYSQL_PASSWORD: user123
+    ports:
+    #local machine : host container
+      - "3307:3306"
+    volumes:
+      - ./mysql-data:/var/lib/mysql
+
+# phpmyadmin service : db client
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: phpmyadmin
+    environment:
+      PMA_HOST: mysql-db
+    ports:
+      - "8081:80"
+    depends_on:
+      - mysql-db
+
+# PostgreSQL Service
+  postgres-db:
+    image: postgres:13
+    container_name: postgres-db
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: user123
+      POSTGRES_DB: coursedb
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./postgres-data:/var/lib/postgresql/data
+
+  # pgAdmin for PostgreSQL
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@gmail.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "8082:80"
+    depends_on:
+      - postgres-db
+
+  #MongoDB ka defalut user & Password : admin & pass
+  # MongoDB Service
+  mongo:
+    image: mongo:latest
+    container_name: mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - ./mongo-data:/data/db
+
+  # Mongo Express for MongoDB
+  mongo-express:
+    image: mongo-express:latest
+    container_name: mongo-express
+    ports:
+      - "8083:8081"
+    environment:
+      ME_CONFIG_MONGODB_SERVER: mongo
+      # MONGO_INITDB_DATABASE: videodb
+    depends_on:
+      - mongo
+
+# Kafka configuaration to run on different port(8092) from default(9092) with kRaft
+  kafka:
+    image: apache/kafka:4.0.0
+    container_name: kafka-kraft
+    ports:
+      - "8085:8085"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: controller,broker
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:8085,CONTROLLER://0.0.0.0:9096
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:8085
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9096
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+
+volumes:
+  mysql-data:
+  postgres-data:
+  mongo-data:
+

@@ -1,0 +1,63 @@
+server:
+  port: 9090
+
+#spring cloud gateway property
+#configuration to provide the url to access direct api through api-gateway
+spring:
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+    # circuit breaker in Microservice resilience.
+    circuitbreaker:
+      resilience4j:
+              enabled: true
+  # service name
+  application:
+    name: gateway-service
+# configuration for request rate limiter redis
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+#service discovery eureka configuration
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka
+
+#application monitoring info (SPRING - ACTUATOR)
+management:
+  info:
+    env:
+      enabled: true
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+# to see api gateway through actuator
+  endpoint:
+    gateway:
+      enabled: true
+#service details
+info:
+  app:
+    name: "gateway-service"
+    description: "This is the gateway service of all microservice"
+    version: "1.0"
+
+# circuit breaker threshold and their property
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        sliding-window-size: 10
+        permitted-number-of-calls-in-half-open-state: 2
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 1000
+
+# configuration for resourceserver to verify token--> uri will download the public certificate and verify the token
+spring.security.oauth2.resourceserver.jwt.jwk-set-uri: "http://localhost:8080/realms/dev/protocol/openid-connect/certs"
